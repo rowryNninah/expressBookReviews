@@ -36,28 +36,33 @@ regd_users.post("/login", (req,res) => {
       return res.status(400).json({ message: "Username and password are required" });
   }
 
-  if (!authenticatedUser(username, password)) {
-      return res.status(401).json({ message: "Invalid username or password" });
+  if (authenticatedUser(username, password)) {
+    const token = jwt.sign({username}, "secretKey", {expiresIn: "2h"});
+    req.session.token = token;
+    return res.status(200).json({message: "Login Seccessful"}) 
+  }else{
+    return res.status(401).json({ message: "Invalid username or password" });
   }
 
-  const token = jwt.sign(
-      { username: username },
-      "access",            
-      { expiresIn: '1h' }
-  );
-
-  return res.status(200).json({
-      message: "User successfully logged in",
-      token: token
-  });
 });
+
+const tokenVerification = (req, res, next) =>{
+    const token = req.session.token;
+    if(!token) return res.status(403).json({message: "Unauthorized login"})
+
+    jwt.verify(token, "secretKey", (err, decoded) =>{
+        if(err)return res.status(403).json({message: "invalid token"})
+        req.user = decoded;
+        next()
+    })
+}
 
 // Add a book review
 regd_users.put("/auth/review/:isbn", (req, res) => {
   //Write your code here
 
   const isbn = req.params.isbn;
-    const { review } = req.body;
+    const review = req.query.review;
     const username = req.user.username; 
 
     if (!books[isbn]) {
@@ -69,10 +74,10 @@ regd_users.put("/auth/review/:isbn", (req, res) => {
     }
 
     books[isbn].reviews[username] = review;
-    return res.status(200).json({ message: "Review added/updated successfully", reviews: books[isbn].reviews });
+    return res.status(200).json({ message: "Review added successfully", reviews: books[isbn].reviews });
 });
 
-regd_users.delete("/auth/review/:isbn", authenticateJWT, (req, res) => {
+regd_users.delete("/auth/review/:isbn", tokenVerification, (req, res) => {
     const isbn = req.params.isbn;
     const username = req.user.username;
 
