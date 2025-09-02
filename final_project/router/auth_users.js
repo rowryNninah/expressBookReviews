@@ -37,8 +37,8 @@ regd_users.post("/login", (req,res) => {
   }
 
   if (authenticatedUser(username, password)) {
-    const token = jwt.sign({username}, "secretKey", {expiresIn: "2h"});
-    req.session.token = token;
+    const token = jwt.sign({username}, "access", {expiresIn: "2h"});
+    req.session.authorization = token;
     return res.status(200).json({message: "Login Seccessful"}) 
   }else{
     return res.status(401).json({ message: "Invalid username or password" });
@@ -47,10 +47,10 @@ regd_users.post("/login", (req,res) => {
 });
 
 const tokenVerification = (req, res, next) =>{
-    const token = req.session.token;
+    const token = req.session.authorization;
     if(!token) return res.status(403).json({message: "Unauthorized login"})
 
-    jwt.verify(token, "secretKey", (err, decoded) =>{
+    jwt.verify(token, "access", (err, decoded) =>{
         if(err)return res.status(403).json({message: "invalid token"})
         req.user = decoded;
         next()
